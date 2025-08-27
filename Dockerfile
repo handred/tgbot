@@ -7,11 +7,11 @@ WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
 
-# Копирование исходного кода
+# Копирование исходного кода (включая docker/)
 COPY . .
 
-# Сборка приложения
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main ./cmd
+# Сборка приложения — УДАЛЁН -installsuffix cgo
+RUN CGO_ENABLED=0 GOOS=linux go build -a -o main .
 
 # Final stage
 FROM alpine:latest
@@ -27,19 +27,24 @@ RUN apk --no-cache add \
 # Создаём непривилегированного пользователя
 RUN adduser -D -s /bin/sh appuser
 
+RUN mkdir -p /app/downloads/video /app/downloads/audio /app/downloads/image && \
+    chown -R appuser:appuser /app/downloads
+
 # Рабочая директория
 WORKDIR /app
 
-# Копируем бинарник и устанавливаем владельца
+# Копируем бинарник
 COPY --from=builder --chown=appuser:appuser /app/main .
+
+# Копируем entrypoint.sh из builder
+COPY --from=builder --chown=appuser:appuser /app/docker/entrypoint.sh /usr/local/bin/entrypoint.sh
+
+# Делаем исполняемым
+RUN chmod +x /usr/local/bin/entrypoint.sh
 
 # Меняем пользователя
 USER appuser
 
-# Опционально: можно добавить entrypoint для автообновления yt-dlp
-COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
+# Запуск
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
-
-# Запуск приложения
-CMD ["/app/main"]
+CMD ["./main"]

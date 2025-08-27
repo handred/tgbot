@@ -12,15 +12,13 @@ services:
       - PROXY_URL=${PROXY_URL}
 
     volumes:
-      - ${PATH_TO_LOAD_VIDEO}:/tmp/videos
-      - ${PATH_TO_LOAD_AUDIO}:/tmp/audio
-      - ${PATH_TO_LOAD_IMG}:/tmp/images
+      - /samba/downloads/video:${PATH_TO_LOAD_VIDEO}
+      - /samba/downloads/audio:${PATH_TO_LOAD_AUDIO}
+      - /samba/downloads/images:${PATH_TO_LOAD_IMG}
 
     networks:
       - monitoring
-    depends_on:
-      - mysql
-      - telegram-api
+
     restart: unless-stopped
 
 networks:
