@@ -1,6 +1,7 @@
 services:
   # YouTube Bot Service
   youtube-bot:
+    user: "${UID:-65534}:${GID:-65534}" # ← запускаем от nobody:nogroup
     build: .
     container_name: youtube-bot
     environment:
