@@ -6,6 +6,8 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
+	"sync"
+	"time"
 )
 
 func DownloadVideo(url string, callback func(string)) error {
@@ -19,7 +21,7 @@ func DownloadVideo(url string, callback func(string)) error {
 		return fmt.Errorf("PROXY_URL is not set")
 	}
 
-	// Лучше передавать аргументы отдельно, чтобы избежать инъекций
+	// Аргументы команды
 	args := []string{
 		"yt-dlp",
 		"--no-cache-dir",
@@ -33,49 +35,91 @@ func DownloadVideo(url string, callback func(string)) error {
 
 	cmd := exec.Command(args[0], args[1:]...)
 
-	// Перенаправляем stderr (основной источник вывода yt-dlp)
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
 		return fmt.Errorf("failed to get stderr pipe: %w", err)
 	}
 
-	// Опционально: можно также читать stdout, если нужно
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return fmt.Errorf("failed to get stdout pipe: %w", err)
 	}
 
-	// Запускаем команду
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("failed to start command: %w", err)
 	}
 
-	// Читаем stderr
+	// === Буферизация прогресса с таймером ===
+	var buffer []string
+	var mu sync.Mutex
+	var lastSent string
+
+	// Флаг, чтобы знать, когда остановиться
+	done := make(chan bool)
+	ticker := time.NewTicker(3 * time.Second) // интервал обновления
+
+	// Функция отправки последнего сообщения из буфера
+	flush := func() {
+		mu.Lock()
+		defer mu.Unlock()
+		if len(buffer) > 0 {
+			latest := buffer[len(buffer)-1]
+			if latest != lastSent && callback != nil {
+				callback(latest)
+				lastSent = latest
+			}
+			buffer = buffer[:0] // очищаем
+		}
+	}
+
+	// Горутина для периодической отправки
 	go func() {
-		scanner := bufio.NewScanner(stderr)
-		scanner.Split(bufio.ScanLines) // читаем по строкам
-		for scanner.Scan() {
-			line := scanner.Text()
-			fmt.Println("stderr:", line) // для отладки
-			callback(line)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				flush()
+			case <-done:
+				flush() // финальная отправка
+				return
+			}
 		}
 	}()
 
-	// Читаем stdout (может быть пустым, но на всякий случай)
+	// Читаем stderr
+	go func() {
+		scanner := bufio.NewScanner(stderr)
+		for scanner.Scan() {
+			line := scanner.Text()
+			fmt.Println("stderr:", line) // лог в консоль
+
+			mu.Lock()
+			buffer = append(buffer, line)
+			mu.Unlock()
+		}
+	}()
+
+	// Читаем stdout
 	go func() {
 		scanner := bufio.NewScanner(stdout)
-		scanner.Split(bufio.ScanLines)
 		for scanner.Scan() {
 			line := scanner.Text()
 			fmt.Println("stdout:", line)
-			callback(line)
+
+			mu.Lock()
+			buffer = append(buffer, line)
+			mu.Unlock()
 		}
 	}()
 
 	// Ждём завершения команды
 	if err := cmd.Wait(); err != nil {
+		close(done)
 		return fmt.Errorf("command failed: %w", err)
 	}
+
+	close(done)                        // останавливаем тикер и отправляем последнее сообщение
+	time.Sleep(100 * time.Millisecond) // даём тикеру шанс обработать финальный flush
 
 	return nil
 }
