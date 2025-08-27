@@ -27,8 +27,8 @@ RUN apk --no-cache add \
 # Создаём непривилегированного пользователя
 RUN adduser -D -s /bin/sh appuser
 
-RUN mkdir -p /app/downloads/video /app/downloads/audio /app/downloads/image && \
-    chown -R appuser:appuser /app/downloads
+# RUN mkdir -p /app/downloads/video /app/downloads/audio /app/downloads/image && \
+#     chown -R appuser:appuser /app/downloads
 
 # Рабочая директория
 WORKDIR /app

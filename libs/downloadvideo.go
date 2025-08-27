@@ -22,6 +22,7 @@ func DownloadVideo(url string, callback func(string)) error {
 	// Лучше передавать аргументы отдельно, чтобы избежать инъекций
 	args := []string{
 		"yt-dlp",
+		"--no-cache-dir",
 		"--no-mtime",
 		"--proxy", proxyUrl,
 		"-o", fmt.Sprintf("%s/%%(id)s.%%(ext)s", pathLoad),
