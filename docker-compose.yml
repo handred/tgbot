@@ -14,7 +14,7 @@ services:
     volumes:
       - /samba/downloads/video:${PATH_TO_LOAD_VIDEO}
       - /samba/downloads/audio:${PATH_TO_LOAD_AUDIO}
-      - /samba/downloads/images:${PATH_TO_LOAD_IMG}
+      - /samba/downloads/image:${PATH_TO_LOAD_IMG}
 
     networks:
       - monitoring
