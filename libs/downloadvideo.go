@@ -21,14 +21,28 @@ func DownloadVideo(url string, callback func(string)) error {
 	}
 
 	// Аргументы команды
+	// args := []string{
+	// 	"yt-dlp",
+	// 	"--no-cache-dir",
+	// 	"--no-mtime",
+	// 	"--proxy", proxyUrl,
+	// 	"-o", fmt.Sprintf("%s/%%(id)s.%%(ext)s", pathLoad),
+	// 	"--merge-output-format=mp4/mkv",
+	// 	"-f", "w",
+	// 	url,
+	// }
+
 	args := []string{
 		"yt-dlp",
 		"--no-cache-dir",
 		"--no-mtime",
 		"--proxy", proxyUrl,
 		"-o", fmt.Sprintf("%s/%%(id)s.%%(ext)s", pathLoad),
-		"--merge-output-format=mp4/mkv",
-		"-f", "w",
+		"--merge-output-format", "mp4",
+		"-f", "bestvideo[height>=720][ext=mp4]+bestaudio[ext=m4a]/best[height>=720][ext=mp4]/best",
+		"--concurrent-fragments", "4",
+		"--embed-subs",
+		"--recode-video", "mp4", // перекодировать в mp4, если нужно
 		url,
 	}
 
