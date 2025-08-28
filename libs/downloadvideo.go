@@ -39,7 +39,7 @@ func DownloadVideo(url string, callback func(string)) error {
 		"--proxy", proxyUrl,
 		"-o", fmt.Sprintf("%s/%%(id)s.%%(ext)s", pathLoad),
 		"--merge-output-format", "mp4",
-		"-f", "bestvideo[height>=720]+bestaudio",
+		"-f", "bestvideo[height>=1080]+bestaudio/bestvideo+bestaudio",
 		"--concurrent-fragments", "4",
 		"--embed-subs",
 		"--recode-video", "mp4", // перекодировать в mp4, если нужно
