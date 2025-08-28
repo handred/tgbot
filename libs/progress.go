@@ -3,6 +3,7 @@
 package libs
 
 import (
+	"strings"
 	"sync"
 	"time"
 )
@@ -63,17 +64,33 @@ func (h *throttledHandler) run() {
 
 func (h *throttledHandler) flush() {
 	h.mu.Lock()
-	defer h.mu.Unlock()
-
 	if len(h.buffer) == 0 {
+		h.mu.Unlock()
 		return
 	}
 
+	// Объединяем сразу под блокировкой
 	latest := h.buffer[len(h.buffer)-1]
-	h.buffer = h.buffer[:0] // очищаем
+	fullText := strings.Join(uniqueLines(h.buffer), "\n")
+	h.buffer = h.buffer[:0]
+	h.mu.Unlock()
 
-	if h.callback != nil && latest != h.lastSent {
-		h.callback(latest)
+	if h.callback != nil {
+		h.callback(fullText)
 		h.lastSent = latest
 	}
+}
+
+func uniqueLines(lines []string) []string {
+	seen := make(map[string]bool)
+	result := make([]string, 0)
+
+	for _, line := range lines {
+		if !seen[line] {
+			seen[line] = true
+			result = append(result, line)
+		}
+	}
+
+	return result
 }
